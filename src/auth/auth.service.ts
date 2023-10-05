@@ -1,9 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
 import { compareSync } from 'bcryptjs';
+import { Auth, getAuth } from 'firebase-admin/auth';
 
 @Injectable()
 export class AuthService {
+  private readonly auth: Auth = getAuth();
   private readonly db: Firestore = getFirestore();
 
   async usernameLogin(username: string, password: string) {
@@ -22,9 +24,11 @@ export class AuthService {
       );
     }
 
+    const token = await this.auth.createCustomToken(username);
+
     return {
+      token: token,
       message: 'Login Berhasil',
-      data: snap.data(),
     };
   }
 }

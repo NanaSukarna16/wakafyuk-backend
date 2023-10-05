@@ -3,6 +3,7 @@ import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { AppModule } from './app.module';
 
 process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+process.env['FIREBASE_AUTH_EMULATOR_HOST'] = 'localhost:9099';
 
 initializeApp({
   credential: applicationDefault(),
@@ -11,6 +12,7 @@ initializeApp({
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(3000);
+  app.enableCors();
+  await app.listen(3001);
 }
 bootstrap();
