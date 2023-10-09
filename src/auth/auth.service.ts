@@ -1,7 +1,8 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
-import { compareSync } from 'bcryptjs';
-import { Auth, getAuth } from 'firebase-admin/auth';
+import { compareSync, hashSync } from 'bcryptjs';
+import { Auth, getAuth, CreateRequest } from 'firebase-admin/auth';
+import { Register } from './register.dto';
 
 @Injectable()
 export class AuthService {
@@ -24,11 +25,54 @@ export class AuthService {
       );
     }
 
-    const token = await this.auth.createCustomToken(username);
+    const token = await this.auth.createCustomToken(snap.get('uid'));
 
     return {
       token: token,
       message: 'Login Berhasil',
+    };
+  }
+
+  async register(data: Register) {
+    const createUserPayload: CreateRequest = { displayName: data.name };
+    if (data.email) {
+      createUserPayload.email = data.email;
+      createUserPayload.password = data.password;
+    }
+
+    if (data.phone) {
+      createUserPayload.phoneNumber = data.phone;
+    }
+
+    const { uid } = await this.auth.createUser(createUserPayload);
+
+    const batch = this.db.batch();
+    const userRef = this.db.collection('users').doc(uid);
+
+    batch.set(userRef, {
+      nama_lengkap: data.name,
+      email: data.email ?? null,
+      nomor_telepon: data.phone ?? null,
+      username: data.username ?? null,
+    });
+
+    if (data.username) {
+      const accountRef = this.db.collection('accounts').doc(data.username);
+
+      batch.set(accountRef, {
+        username: data.username,
+        password: hashSync(data.password, 12),
+        uid: uid,
+      });
+    }
+
+    await batch.commit();
+
+    const token = await this.auth.createCustomToken(uid);
+
+    return {
+      token: token,
+      message: 'Registrasi berhasil',
     };
   }
 }
